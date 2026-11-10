@@ -6,7 +6,7 @@
 <header><small>TOKYO · WINTER 2026</small><h1>Christmas in Tokyo</h1><div style="color:#e6c98c;font-size:18px">東京聖誕活動攻略 & 同行投票</div><p>2026 年 11 月 23 日（一）｜一起選出最想去的聖誕景點</p></header>
 <main class="wrap"><p>📅 11/23 國定假日　🎄 複選投票　👥 暱稱參與　📍 銀座／錦糸町出發</p>
 <div class="notice"><b>投票說明：</b>輸入暱稱、勾選想去的活動後送出。票數會自動同步給所有同行者。每個活動卡片都附有特色、適合對象、11/23 當天開放資訊及場地評價連結；活動時間可能調整，請以官方最新公告為準。</div>
-<h2>🎁 活動一覽｜勾選想去的地方</h2><div class="cards" id="cards"></div>
+<h2>🎁 活動一覽｜每人最多選 2 個</h2><p class="small" id="choiceCount">已選 0 / 2 個</p><div class="cards" id="cards"></div>
 <section class="panel"><h2>🗳️ 送出你的選擇</h2><label for="nickname">你的暱稱</label><input id="nickname" type="text" maxlength="24" placeholder="例如：小安"><p class="small">相同暱稱再次投票會更新原本選擇。</p><div class="actions"><button id="voteBtn">送出／更新投票</button><button class="alt" id="refreshBtn">重新整理票數</button></div><div id="voteStatus" class="status" role="status"></div></section>
 <section class="panel"><h2>📊 同行者票選結果</h2><div id="results" class="small">尚未載入投票結果。</div><div id="total" class="small"></div></section>
 
@@ -21,6 +21,14 @@ const events=[
 {id:'ebisu',name:'惠比壽花園廣場',time:'點燈 16:00–23:00；11/23 市集 12:00–20:00',stay:'1–1.5 小時',from:'銀座：日比谷線至惠比壽；錦糸町：JR 經秋葉原轉乘',desc:'約 10 萬顆香檳金燈飾、約 10 公尺聖誕樹，營造歐洲街區般的浪漫氣氛。時計廣場有聖誕市集，可逛雜貨、吃熱食；部分市集區域分階段開幕。',highlight:'香檳金燈海、巨型聖誕樹、歐風市集與特色餐飲',fit:'喜歡浪漫燈飾、聖誕樹、悠閒拍照與小型市集的人',dateNote:'11/23 可看燈飾與時計廣場市集；時計廣場市集週末及假日 12:00–20:00。シャトー廣場市集要到 11/27 才開始。',img:'https://images.unsplash.com/photo-1513297887119-d3c07c1b8db8?w=900',url:'https://event.gardenplace.jp/special/2026christmas/',reviewUrl:'https://www.google.com/maps/search/?api=1&query=Yebisu+Garden+Place+Tokyo'},
 {id:'ueno',name:'上野 Tokyo Christmas Advent',time:'袴腰廣場 12:00–23:00；不忍池區域假日 12:00–22:00',stay:'1.5–2.5 小時',from:'銀座：銀座線直達上野；錦糸町：JR 轉乘至上野',desc:'上野恩賜公園的大型聖誕活動，主題為「Five Senses Christmas」。超過 30 間市集小屋提供美食、飲品與手作雜貨，另有燈飾、音樂及表演節目，活動分布在袴腰廣場與不忍池周邊。',highlight:'大型市集、多元餐飲、燈飾、音樂與表演',fit:'想一次逛較多攤位、吃喝、感受熱鬧節慶氣氛的人',dateNote:'11/23 兩個區域皆已開放；不忍池區域週末及假日 12:00–22:00。表演及付費節目請另查主辦單位公告。',img:'https://images.unsplash.com/photo-1511268559489-34b624fbfcf5?w=900',url:'https://christmas-advent.jp/tokyo-ueno/',reviewUrl:'https://www.google.com/maps/search/?api=1&query=Ueno+Park+Tokyo'}];
 const el=id=>document.getElementById(id);el('cards').innerHTML=events.map(e=>'<article class="card"><img src="'+e.img+'" alt="'+e.name+'" loading="lazy"><div class="body"><h3>'+e.name+'</h3><span class="tag">建議停留 '+e.stay+'</span><p>'+e.desc+'</p><div class="meta"><b>✨ 主要看點：</b>'+e.highlight+'</div><div class="meta"><b>🙋 適合：</b>'+e.fit+'</div><div class="meta"><b>📅 11/23 當天：</b>'+e.dateNote+'</div><div class="meta">🕒 '+e.time+'</div><div class="meta">🚆 '+e.from+'</div><div class="actions"><a class="link" href="'+e.url+'" target="_blank" rel="noopener">官方活動資訊 ↗</a><a class="link" href="'+e.reviewUrl+'" target="_blank" rel="noopener">Google Maps 場地評價 ↗</a></div><label class="pick"><input type="checkbox" class="choice" value="'+e.id+'"> 我想去這裡</label></div></article>').join('');
+const choiceBoxes=[...document.querySelectorAll('.choice')];
+function updateChoiceLimit(){
+ const selected=choiceBoxes.filter(x=>x.checked).length;
+ el('choiceCount').textContent='已選 '+selected+' / 2 個（每人最多兩票）';
+ choiceBoxes.forEach(x=>{x.disabled=!x.checked&&selected>=2;});
+}
+choiceBoxes.forEach(x=>x.addEventListener('change',updateChoiceLimit));
+updateChoiceLimit();
 const SUPABASE_URL='https://loakonqeebhqugubuzju.supabase.co';
 const SUPABASE_KEY='sb_publishable_u5L6R1zzRNYGoUR3WBki1w_8zYYxMX1';
 let client=null;
@@ -30,6 +38,6 @@ function connect(){
  return true
 }
 async function refresh(){if(!client){el('results').textContent='尚未連接共用資料庫。';el('total').textContent='';return}const {data,error}=await client.from('christmas_votes').select('nickname,selections');if(error){el('results').textContent='讀取失敗：'+error.message;return}const counts=Object.fromEntries(events.map(e=>[e.id,0]));(data||[]).forEach(v=>(v.selections||[]).forEach(id=>{if(counts[id]!==undefined)counts[id]++}));const max=Math.max(1,...Object.values(counts));el('results').innerHTML=events.map(e=>'<div class="barline"><span>'+e.name+'</span><b>'+counts[e.id]+' 票</b></div><div class="bar"><span style="width:'+(counts[e.id]/max*100)+'%"></span></div>').join('');el('total').textContent='目前共有 '+data.length+' 位投票者 · 每人可複選'}
-el('voteBtn').onclick=async()=>{const nickname=el('nickname').value.trim(),selections=[...document.querySelectorAll('.choice:checked')].map(x=>x.value);if(!nickname){msg('voteStatus','請先輸入暱稱。');return}if(!selections.length){msg('voteStatus','請至少勾選一個活動。');return}if(!client){msg('voteStatus','尚未連接共用資料庫，請重新整理頁面。');return}const {error}=await client.from('christmas_votes').upsert({nickname,selections,updated_at:new Date().toISOString()},{onConflict:'nickname'});msg('voteStatus',error?'投票失敗：'+error.message:'投票成功！你的選擇已更新。');if(!error)refresh()};
+el('voteBtn').onclick=async()=>{const nickname=el('nickname').value.trim(),selections=[...document.querySelectorAll('.choice:checked')].map(x=>x.value);if(!nickname){el('voteStatus').textContent='請先輸入暱稱。';return}if(!selections.length){el('voteStatus').textContent='請至少選擇一個活動。';return}if(selections.length>2){el('voteStatus').textContent='每人最多只能選擇兩個活動，請取消多選項目。';return}if(!client){el('voteStatus').textContent='尚未連接共用資料庫，請重新整理頁面。';return}const {error}=await client.from('christmas_votes').upsert({nickname,selections,updated_at:new Date().toISOString()},{onConflict:'nickname'});el('voteStatus').textContent=error?'投票失敗：'+error.message:'投票成功！你的選擇已更新。';if(!error)refresh()};
 el('refreshBtn').onclick=refresh;if(connect())refresh();
 </script></body></html>
