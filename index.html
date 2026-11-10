@@ -9,7 +9,7 @@
 <h2>🎁 活動一覽｜勾選想去的地方</h2><div class="cards" id="cards"></div>
 <section class="panel"><h2>🗳️ 送出你的選擇</h2><label for="nickname">你的暱稱</label><input id="nickname" type="text" maxlength="24" placeholder="例如：小安"><p class="small">相同暱稱再次投票會更新原本選擇。</p><div class="actions"><button id="voteBtn">送出／更新投票</button><button class="alt" id="refreshBtn">重新整理票數</button></div><div id="voteStatus" class="status" role="status"></div></section>
 <section class="panel"><h2>📊 同行者票選結果</h2><div id="results" class="small">尚未載入投票結果。</div><div id="total" class="small"></div></section>
-<section class="panel"><h2>⚙️ 共用投票設定（管理者設定一次即可）</h2><p class="small">建立 Supabase 免費專案，先在 SQL Editor 執行專案中的 schema.sql，再填入 Project URL 與 anon／publishable key。請勿使用 service_role secret key。</p><label for="sbUrl">Supabase Project URL</label><input id="sbUrl" type="url" placeholder="https://xxxx.supabase.co"><label for="sbKey">Supabase anon／publishable key</label><input id="sbKey" type="text" placeholder="sb_publishable_... 或 anon key"><div class="actions"><button id="saveConfig">儲存連線設定</button><button class="alt" id="testConfig">測試連線</button></div><div id="configStatus" class="status"></div><p class="small">設定儲存在目前瀏覽器。管理者完成後，請將同一網址及資料庫設定方式提供給同行者；每位投票者需在自己的裝置輸入連線資訊，或由管理者將設定整合進網站程式。</p><a class="link" href="https://supabase.com/dashboard" target="_blank" rel="noopener">前往 Supabase ↗</a></section>
+
 <div class="foot">活動資訊為行前規劃參考，請以主辦單位公告為準。<br>Tokyo Christmas 2026 · Group Planner</div></main>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
 const events=[
@@ -21,11 +21,15 @@ const events=[
 {id:'ebisu',name:'惠比壽花園廣場',time:'點燈約 16:00–23:00；市集時間依公告',stay:'1–1.5 小時',from:'銀座：日比谷線至惠比壽；錦糸町：JR 經秋葉原轉乘',desc:'歐洲風格聖誕市集、聖誕樹與悠閒街區氣氛。天候不佳時市集可能調整。',img:'https://images.unsplash.com/photo-1513297887119-d3c07c1b8db8?w=900',url:'https://gardenplace.jp/'},
 {id:'ueno',name:'上野聖誕主題活動',time:'各區域活動時間與開放範圍請確認主辦單位公告',stay:'1–2 小時',from:'銀座：銀座線直達上野；錦糸町：JR 轉乘至上野',desc:'上野公園周邊聖誕主題活動；不同區域開放安排可能不同，建議先查證。',img:'https://images.unsplash.com/photo-1511268559489-34b624fbfcf5?w=900',url:'https://www.gotokyo.org/'}];
 const el=id=>document.getElementById(id);el('cards').innerHTML=events.map(e=>'<article class="card"><img src="'+e.img+'" alt="'+e.name+'" loading="lazy"><div class="body"><h3>'+e.name+'</h3><span class="tag">'+e.stay+'</span><p>'+e.desc+'</p><div class="meta">🕒 '+e.time+'</div><div class="meta">🚆 '+e.from+'</div><a class="link" href="'+e.url+'" target="_blank" rel="noopener">官方資訊 ↗</a><label class="pick"><input type="checkbox" class="choice" value="'+e.id+'"> 我想去這裡</label></div></article>').join('');
-let client=null;const keyName='tokyoChristmasSupabaseConfig';function cfg(){try{return JSON.parse(localStorage.getItem(keyName)||'{}')}catch{return {}}}function msg(id,s){el(id).textContent=s}
-function connect(){const c=cfg();if(!c.url||!c.key){msg('configStatus','請填入資料庫 URL 與 key。');return false}if(!window.supabase){msg('configStatus','Supabase 程式載入失敗，請重整頁面。');return false}client=window.supabase.createClient(c.url,c.key);return true}
+const SUPABASE_URL='https://loakonqeebhqugubuzju.supabase.co';
+const SUPABASE_KEY='sb_publishable_u5L6R1zzRNYGoUR3WBki1w_8zYYxMX1';
+let client=null;
+function connect(){
+ if(!window.supabase){el('voteStatus').textContent='Supabase 程式載入失敗，請重整頁面。';return false}
+ client=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+ return true
+}
 async function refresh(){if(!client){el('results').textContent='尚未連接共用資料庫。';el('total').textContent='';return}const {data,error}=await client.from('christmas_votes').select('nickname,selections');if(error){el('results').textContent='讀取失敗：'+error.message;return}const counts=Object.fromEntries(events.map(e=>[e.id,0]));(data||[]).forEach(v=>(v.selections||[]).forEach(id=>{if(counts[id]!==undefined)counts[id]++}));const max=Math.max(1,...Object.values(counts));el('results').innerHTML=events.map(e=>'<div class="barline"><span>'+e.name+'</span><b>'+counts[e.id]+' 票</b></div><div class="bar"><span style="width:'+(counts[e.id]/max*100)+'%"></span></div>').join('');el('total').textContent='目前共有 '+data.length+' 位投票者 · 每人可複選'}
-el('saveConfig').onclick=()=>{const url=el('sbUrl').value.trim(),key=el('sbKey').value.trim();if(!url||!key){msg('configStatus','請完整填寫兩個欄位。');return}localStorage.setItem(keyName,JSON.stringify({url,key}));connect();msg('configStatus','設定已儲存於這台裝置，請測試連線。')};
-el('testConfig').onclick=async()=>{if(!connect())return;const {error}=await client.from('christmas_votes').select('id').limit(1);msg('configStatus',error?'連線失敗：'+error.message:'連線成功！共用資料庫已就緒。');if(!error)refresh()};
 el('voteBtn').onclick=async()=>{const nickname=el('nickname').value.trim(),selections=[...document.querySelectorAll('.choice:checked')].map(x=>x.value);if(!nickname){msg('voteStatus','請先輸入暱稱。');return}if(!selections.length){msg('voteStatus','請至少勾選一個活動。');return}if(!client){msg('voteStatus','尚未連接資料庫，請先完成共用投票設定。');return}const {error}=await client.from('christmas_votes').upsert({nickname,selections,updated_at:new Date().toISOString()},{onConflict:'nickname'});msg('voteStatus',error?'投票失敗：'+error.message:'投票成功！你的選擇已更新。');if(!error)refresh()};
-el('refreshBtn').onclick=refresh;const saved=cfg();el('sbUrl').value=saved.url||'';el('sbKey').value=saved.key||'';
+el('refreshBtn').onclick=refresh;if(connect())refresh();
 </script></body></html>
